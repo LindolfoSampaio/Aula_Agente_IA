@@ -10,13 +10,102 @@ app.use(express.json());
 
 const sessions = {};
 
+function evaluateExpression(expression) {
+  if (typeof expression !== "string" || !/^[\d+\-*/().\s]+$/.test(expression)) {
+    throw new Error("Expressão inválida");
+  }
+
+  const tokens = expression.replace(/\s+/g, "").match(/\d+(?:\.\d+)?|[()+\-*/]/g);
+  if (!tokens || tokens.join("") !== expression.replace(/\s+/g, "")) {
+    throw new Error("Expressão inválida");
+  }
+
+  const output = [];
+  const operators = [];
+  const precedence = { "+": 1, "-": 1, "*": 2, "/": 2 };
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    const prev = tokens[i - 1];
+
+    if (/^\d/.test(token)) {
+      output.push(Number(token));
+      continue;
+    }
+
+    if (token === "(") {
+      operators.push(token);
+      continue;
+    }
+
+    if (token === ")") {
+      while (operators.length && operators[operators.length - 1] !== "(") {
+        output.push(operators.pop());
+      }
+      if (operators.pop() !== "(") {
+        throw new Error("Expressão inválida");
+      }
+      continue;
+    }
+
+    if (
+      token === "-" &&
+      (i === 0 || prev === "(" || ["+", "-", "*", "/"].includes(prev))
+    ) {
+      output.push(0);
+    }
+
+    while (
+      operators.length &&
+      operators[operators.length - 1] !== "(" &&
+      precedence[operators[operators.length - 1]] >= precedence[token]
+    ) {
+      output.push(operators.pop());
+    }
+    operators.push(token);
+  }
+
+  while (operators.length) {
+    const op = operators.pop();
+    if (op === "(" || op === ")") {
+      throw new Error("Expressão inválida");
+    }
+    output.push(op);
+  }
+
+  const stack = [];
+  for (const item of output) {
+    if (typeof item === "number") {
+      stack.push(item);
+      continue;
+    }
+
+    const b = stack.pop();
+    const a = stack.pop();
+    if (typeof a !== "number" || typeof b !== "number") {
+      throw new Error("Expressão inválida");
+    }
+
+    if (item === "+") stack.push(a + b);
+    if (item === "-") stack.push(a - b);
+    if (item === "*") stack.push(a * b);
+    if (item === "/") stack.push(a / b);
+  }
+
+  if (stack.length !== 1 || Number.isNaN(stack[0])) {
+    throw new Error("Expressão inválida");
+  }
+
+  return String(stack[0]);
+}
+
 const tools = {
   getTime: () => {
     return new Date().toLocaleString();
   },
   calculate: (expression) => {
     try {
-      return eval(expression).toString();
+      return evaluateExpression(expression);
     } catch {
       return "Erro ao calcular";
     }
@@ -94,13 +183,5 @@ app.post("/chat", async (req, res) => {
     res.status(500).json({ error: "Erro no agente" });
   }
 });
-
-const PORT = process.env.PORT || 3000;
-
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🤖 Agente rodando em http://localhost:${PORT}`);
-  });
-}
 
 module.exports = { app, tools };
