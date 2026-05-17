@@ -1,15 +1,17 @@
-import { useState } from "react";
+import React, { useState, type JSX } from "react";
 import "./App.css";
 
 const API_URL = "http://localhost:3001";
 
-function App() {
-  const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([]);
-  const [sessionId, setSessionId] = useState(null);
-  const [loading, setLoading] = useState(false);
+type Message = { role: "user" | "agent"; text: string };
 
-  const sendMessage = async () => {
+function App(): JSX.Element {
+  const [message, setMessage] = useState<string>("");
+  const [chat, setChat] = useState<Message[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const sendMessage = async (): Promise<void> => {
     if (!message) return;
 
     setLoading(true);
@@ -24,10 +26,10 @@ function App() {
 
     setSessionId(data.sessionId);
 
-    setChat((prev) => [
+    setChat((prev: Message[]) => [
       ...prev,
       { role: "user", text: message },
-      { role: "agent", text: data.reply }
+      { role: "agent", text: String(data.reply) }
     ]);
 
     setMessage("");
@@ -39,7 +41,7 @@ function App() {
       <h1>Teste de Agente de IA</h1>
 
       <div className="chat-box">
-        {chat.map((msg, i) => (
+        {chat.map((msg: Message, i: number) => (
           <div
             key={i}
             className={`msg ${msg.role === "user" ? "user" : "agent"}`}
@@ -54,7 +56,7 @@ function App() {
       <div className="input-area">
         <input
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessage(e.target.value)}
           placeholder="Digite sua mensagem..."
         />
         <button onClick={sendMessage} disabled={loading}>

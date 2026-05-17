@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("crypto");
 
 const app = express();
 app.use(cors());
@@ -10,6 +10,12 @@ app.use(express.json());
 
 // 🧠 Memória em memória (simples para aula)
 const sessions = {};
+
+function resetSessions() {
+  for (const key of Object.keys(sessions)) {
+    delete sessions[key];
+  }
+}
 
 // 🛠️ Tools do agente
 const tools = {
@@ -50,7 +56,7 @@ Caso contrário, responda normalmente.
 app.post("/chat", async (req, res) => {
   const { message, sessionId } = req.body;
 
-  const id = sessionId || uuidv4();
+  const id = sessionId || randomUUID();
 
   if (!sessions[id]) {
     sessions[id] = [
@@ -107,6 +113,10 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`🤖 Agente rodando em http://localhost:${process.env.PORT}`);
-});
+if (require.main === module) {
+  app.listen(process.env.PORT, () => {
+    console.log(`🤖 Agente rodando em http://localhost:${process.env.PORT}`);
+  });
+}
+
+module.exports = { app, tools, sessions, resetSessions };
